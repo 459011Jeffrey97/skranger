@@ -322,6 +322,30 @@ class RangerForestRegressor(BaseRangerForest, RegressorMixin, BaseEstimator):
             return np.squeeze(quantile_predictions)
         return quantile_predictions.T
 
+    def predict_std(self, X):
+        """Predict sdt regression target for X.
+        :param array2d X: prediction input features
+        """
+        if not hasattr(self, "random_node_values_"):
+            raise ValueError("Must set quantiles = True for std predictions.")
+        check_is_fitted(self)
+        X = check_array(X)
+        self._check_n_features(X, reset=False)
+
+        forest = self._get_terminal_node_forest(X)
+        terminal_nodes = np.array(forest["predictions"]).astype(int)
+        terminal_nodes = np.atleast_2d(terminal_nodes)
+        node_values = 0.0 * terminal_nodes
+        for tree in range(self.n_estimators):
+            node_values[:, tree] = self.random_node_values_[
+                terminal_nodes[:, tree], tree
+            ]
+        quantile_predictions = np.std(node_values, axis=1)
+        if len(quantiles) == 1:
+            return np.squeeze(quantile_predictions)
+        return quantile_predictions.T    
+    
+    
     def predict(self, X, quantiles=None):
         """Predict regression target for X.
 
